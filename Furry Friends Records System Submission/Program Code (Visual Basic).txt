@@ -1,0 +1,1516 @@
+Imports Word = Microsoft.Office.Interop.Word
+Imports Microsoft.Office.Interop
+
+Public Class CaseNumber
+    Private Sub NewArrivalButton_Click(sender As Object, e As EventArgs) Handles NewArrivalButton.Click
+        Dim newArrivalForm As New_Arrival
+        newArrivalForm = New New_Arrival
+        newArrivalForm.Show()
+        newArrivalForm = Nothing
+        Me.Hide()
+    End Sub
+    Private Sub CostReportButton_Click(sender As Object, e As EventArgs) Handles CostReportButton.Click
+        Dim objExcel As New Excel.Application
+        Dim objWorkbook As Excel.Workbook
+        Dim objSheet As Excel.Worksheet
+        objWorkbook = objExcel.Workbooks.Open(CurDir() & "\Resources\Furry Friends Records Database.xls")
+        objSheet = objWorkbook.ActiveSheet
+
+        ' Get the Word application object.
+        Dim word_app As Word._Application = New Word.ApplicationClass()
+
+        ' Make Word visible (optional).
+        'word_app.Visible = True
+
+        ' Create the Word document.
+        Dim costReport As Word._Document = word_app.Documents.Add()
+
+        Dim costs, testCosts, totalCosts As Integer
+        Dim caseNum As Integer = CUInt(CaseNumberInput.Text)
+        Dim currentDate As Date = Today 'Today's Date
+
+        Dim rowNum As Integer = caseNum + 1
+
+        Dim arrivalDate As Date = DateValue(objSheet.Range("F" & rowNum).Text) ''''''''''''''''''''''
+        Dim yearsInShelter As Integer = DateDiff(DateInterval.Year, arrivalDate, currentDate)
+        Dim monthsInShelter As Integer = DateDiff(DateInterval.Month, arrivalDate, currentDate)
+        Dim daysInShelter As Integer = DateDiff(DateInterval.Day, arrivalDate, currentDate)
+
+        ' Create title
+        Dim para As Word.Paragraph = costReport.Paragraphs.Add()
+        para.Range.Text = "Furry Friends Animal Shelter"
+        para.Range.Style = "Heading 1"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Cost Report"
+        para.Range.Style = "Heading 2"
+        para.Range.Text = "Generated on " & currentDate
+        para.Range.Style = "Heading 2"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        'Animal Info
+        para.Range.Text = "Case Number:   " & objSheet.Range("A" & rowNum).Text & vbTab & vbTab & vbTab _
+                        & "Animal Name:   " & objSheet.Range("B" & rowNum).Text
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Date of Arrival:   " & objSheet.Range("F" & rowNum).Text & vbTab & vbTab & "Animal Type:   " & objSheet.Range("C" & rowNum).Text
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        'Microchipping
+        If objSheet.Range("G" & rowNum).Text = "No" Then
+            costs += 5
+            para.Range.Text = "Micro-chipping" & vbTab & vbTab & vbTab & "$5.00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Once a Month Flea Treatments
+        If monthsInShelter > 0 Then
+            costs += 10 * monthsInShelter + 10 '+10 is the initial treatment upon arrival
+            para.Range.Text = "Flea Treatments" & vbTab & vbTab & vbTab & "$" & (10 * monthsInShelter + 10) & ".00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Vaccinations
+        If objSheet.Range("AA" & rowNum).Text = "Yes" Then
+            costs += 15
+            para.Range.Text = "Rabies Vaccination" & vbTab & vbTab & "$15.00"
+            para.Range.InsertParagraphAfter()
+        End If
+        If objSheet.Range("AB" & rowNum).Text = "Yes" Then
+            costs += 15
+            para.Range.Text = "Distemper Vaccination" & vbTab & vbTab & vbTab & "$15.00"
+            para.Range.InsertParagraphAfter()
+        End If
+        If objSheet.Range("AC" & rowNum).Text = "Yes" Then
+            costs += 15
+            para.Range.Text = "Bordetella Vaccination" & vbTab & vbTab & "$15.00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Other Vaccinations
+        If objSheet.Range("AL" & rowNum).Value > "0" Then
+            Dim numVaccinations As Integer = CUInt(objSheet.Range("AL" & rowNum).Value) ''''''''''''''''''''''''''''''''''''''''''
+            costs += numVaccinations * 15
+            para.Range.Text = "Other vaccinations" & vbTab & vbTab & "$" & (numVaccinations * 15) & ".00" & vbNewLine & vbTab & "(" & objSheet.Range("AM" & rowNum).Text & ")"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Heartworm Test
+        If Not objSheet.Range("W" & rowNum).Text = "" Then
+            testCosts += 10
+            para.Range.Text = "Heartworm Test" & vbTab & vbTab & vbTab & "$10.00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Feline Leukemia Test
+        If objSheet.Range("AI" & rowNum).Text = "Positive" Then
+            testCosts += 15
+            para.Range.Text = "Feline Leukemia Test" & vbTab & vbTab & "$15.00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Yearly Rabies Tests (state law)
+        Dim dateOfRabiesTest As Date = DateValue(objSheet.Range("F" & rowNum).Text)
+
+        Dim yearsSinceRabiesTest As Integer = DateDiff(DateInterval.Year, dateOfRabiesTest, currentDate)
+        If yearsSinceRabiesTest > 0 Then
+            testCosts += (30 * yearsSinceRabiesTest) + 1
+            para.Range.Text = "Yearly Rabies Tests" & vbTab & vbTab & "$" & (30 * (yearsSinceRabiesTest + 1)) & ".00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Daily Tests
+        If daysInShelter > 0 Then
+            testCosts += 10 * daysInShelter
+            para.Range.Text = "Daily Tests" & vbTab & vbTab & vbTab & "$" & (10 * daysInShelter) & ".00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Once a month flea preventions
+        If monthsInShelter > 0 Then
+            testCosts += 3 * monthsInShelter
+            para.Range.Text = "Flea Preventions" & vbTab & vbTab & "$" & (3 * monthsInShelter) & ".00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        'Spay/Neutered
+        If objSheet.Range("S" & rowNum).Text = "No" Then
+            testCosts += 75
+            para.Range.Text = "Spay/Neuter Procedure" & vbTab & vbTab & "$75.00"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        totalCosts = costs + testCosts
+
+        totalCosts = costs + testCosts
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        para.Range.Text = "General Costs" & vbTab & vbTab & vbTab & "$" & costs & ".00"
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Test Costs" & vbTab & vbTab & vbTab & "$" & testCosts & ".00"
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Total Costs" & vbTab & vbTab & vbTab & "$" & totalCosts & ".00"
+        para.Range.InsertParagraphAfter()
+        para.Range.Font.Bold = True
+
+        ' Save the document.
+        Dim tempFileName As String = "" & caseNum & " Cost Report"
+        costReport.SaveAs2(CurDir() & "\Reports\Cost Reports\" & tempFileName)
+        costReport.SaveAs2(CurDir() & "\Reports\Cost Reports\" & tempFileName & ".pdf", 17)
+        costReport.Close()
+        word_app.Quit()
+        objExcel.Quit()
+        System.Diagnostics.Process.Start(CurDir() & "\Reports\Cost Reports\" & tempFileName & ".pdf")
+    End Sub
+    Private Sub CaseNumber_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        Application.Exit()
+    End Sub
+    Private Sub InventoryReportButton_Click(sender As Object, e As EventArgs) Handles InventoryReportButton.Click
+        Dim objExcel As New Excel.Application
+        Dim objWorkbook As Excel.Workbook
+        Dim objSheet As Excel.Worksheet
+        objWorkbook = objExcel.Workbooks.Open(CurDir() & "\Resources\Furry Friends Records Database.xls")
+        objSheet = objWorkbook.ActiveSheet
+
+
+        ' Get the Word application object.
+        Dim word_app As Word._Application = New Word.ApplicationClass()
+
+        ' Make Word visible (optional).
+        'word_app.Visible = True
+
+        ' Create the Word document.
+        Dim inventoryReport As Word._Document = word_app.Documents.Add()
+
+        ' Create title
+        Dim para As Word.Paragraph = inventoryReport.Paragraphs.Add()
+        para.Range.Text = "Furry Friends Animal Shelter"
+        para.Range.Style = "Heading 1"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Inventory Report"
+        para.Range.Style = "Heading 2"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        Dim caseNum As Integer = 2
+
+        'Create "table" header
+        para.Range.Text = "Case Number" & vbTab & vbTab & "Animal Name" & vbTab & vbTab & "Animal Type" & vbTab & vbTab & "Cage Number"
+        para.Range.Font.Bold = True
+        para.Range.InsertParagraphAfter()
+
+        para.Range.Font.Bold = False
+
+        While Not (objSheet.Range("A" & caseNum).Text = "")
+            'objSheet.Range("A" & caseNum).Value() == Case Number == (caseNum+1)
+            'objSheet.Range("C" & caseNum).Value() == Animal Type
+            'objSheet.Range("M" & caseNum).Value() == Cage Number/Location
+            para.Range.Text = objSheet.Range("A" & caseNum).Value() & vbTab & vbTab & vbTab _
+                            & objSheet.Range("B" & caseNum).Value() & vbTab & vbTab & vbTab _
+                            & objSheet.Range("C" & caseNum).Value() & vbTab & vbTab & vbTab _
+                            & objSheet.Range("M" & caseNum).Value()
+            para.Range.InsertParagraphAfter()
+            caseNum = caseNum + 1
+        End While
+
+        objExcel.ActiveWorkbook.Close()
+        objExcel.Quit()
+
+        ' Save the document.
+        Dim tempFileName As String = "Inventory Report"
+        inventoryReport.SaveAs2(CurDir() & "\Reports\" & tempFileName)
+        inventoryReport.SaveAs2(CurDir() & "\Reports\" & tempFileName & ".pdf", 17)
+        inventoryReport.Close()
+        word_app.Quit()
+        objExcel.Quit()
+        System.Diagnostics.Process.Start(CurDir() & "\Reports\" & tempFileName & ".pdf")
+    End Sub
+    Private Sub ClientReportButton_Click(sender As Object, e As EventArgs) Handles ClientReportButton.Click
+        Dim caseNum As Integer = CUInt(CaseNumberInput.Text)
+        System.Diagnostics.Process.Start(CurDir() & "\Reports\Client Reports\" & caseNum & " Client Report.pdf")
+    End Sub
+    Private Function generateCost(ByVal caseNum As Integer) As Integer
+        Dim objExcel As New Excel.Application
+        Dim objWorkbook As Excel.Workbook
+        Dim objSheet As Excel.Worksheet
+        objWorkbook = objExcel.Workbooks.Open(CurDir() & "\Resources\Furry Friends Records Database.xls")
+        objSheet = objWorkbook.ActiveSheet
+
+        Dim costs, testCosts, totalCosts As Integer
+        Dim currentDate As Date = Today 'Today's Date
+        Dim rowNum As Integer = caseNum + 1
+
+        Dim arrivalDate As Date = DateValue(objSheet.Range("F" & rowNum).Text)
+        Dim yearsInShelter As Integer = DateDiff(DateInterval.Year, arrivalDate, currentDate)
+        Dim monthsInShelter As Integer = DateDiff(DateInterval.Month, arrivalDate, currentDate)
+        Dim daysInShelter As Integer = DateDiff(DateInterval.Day, arrivalDate, currentDate)
+
+        'Microchipping
+        If objSheet.Range("G" & rowNum).Text = "No" Then
+            costs += 5
+        End If
+
+        'Once a Month Flea Treatments
+        If monthsInShelter > 0 Then
+            costs += 10 * monthsInShelter + 10 '+10 is the initial treatment upon arrival
+        End If
+
+        'Vaccinations
+        If objSheet.Range("AA" & rowNum).Text = "Yes" Then
+            costs += 15
+        End If
+        If objSheet.Range("AB" & rowNum).Text = "Yes" Then
+            costs += 15
+        End If
+        If objSheet.Range("AC" & rowNum).Text = "Yes" Then
+            costs += 15
+        End If
+
+        'Other Vaccinations
+        If objSheet.Range("AL" & rowNum).Value > "0" Then
+            Dim numVaccinations As Integer = CUInt(objSheet.Range("AL" & rowNum).Value) ''''''''''''''''''''''''''''''''''''''''''
+            costs += numVaccinations * 15
+        End If
+
+        'Heartworm Test
+        If Not objSheet.Range("W" & rowNum).Text = "" Then
+            testCosts += 10
+        End If
+
+        'Feline Leukemia Test
+        If objSheet.Range("AI" & rowNum).Text = "Positive" Then
+            testCosts += 15
+        End If
+
+        'Yearly Rabies Tests (state law)
+        Dim dateOfRabiesTest As Date = DateValue(objSheet.Range("F" & rowNum).Text)
+
+        Dim yearsSinceRabiesTest As Integer = DateDiff(DateInterval.Year, dateOfRabiesTest, currentDate)
+        If yearsSinceRabiesTest > 0 Then
+            testCosts += (30 * yearsSinceRabiesTest) + 1
+        End If
+
+        'Daily Tests
+        If daysInShelter > 0 Then
+            testCosts += 10 * daysInShelter
+        End If
+
+        'Once a month flea preventions
+        If monthsInShelter > 0 Then
+            testCosts += 3 * monthsInShelter
+        End If
+
+        'Spay/Neutered
+        If objSheet.Range("S" & rowNum).Text = "No" Then
+            testCosts += 75
+        End If
+
+        totalCosts = costs + testCosts
+
+        objExcel.Quit()
+
+        Return (totalCosts)
+    End Function
+    Private Sub ExpenseReportButton_Click(sender As Object, e As EventArgs) Handles ExpenseReportButton.Click
+        Dim objExcel As New Excel.Application
+        Dim objWorkbook As Excel.Workbook
+        Dim objSheet As Excel.Worksheet
+        objWorkbook = objExcel.Workbooks.Open(CurDir() & "\Resources\Furry Friends Records Database.xls")
+        objSheet = objWorkbook.ActiveSheet
+
+        ' Read in all existing case numbers to determine a new case number for current animal
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CaseNumbers.txt")
+        Dim lastCaseNum As String = 0
+
+        Do While reader.Peek <> -1
+            lastCaseNum = reader.ReadLine()
+        Loop
+        Dim intLastCaseNum As Integer = CUInt(lastCaseNum)
+        reader.Close()
+
+
+        ' Get the Word application object.
+        Dim word_app As Word._Application = New Word.ApplicationClass()
+
+        ' Make Word visible (optional).
+        'word_app.Visible = True
+
+        ' Create the Word document.
+        Dim inventoryReport As Word._Document = word_app.Documents.Add()
+
+        ' Create title
+        Dim para As Word.Paragraph = inventoryReport.Paragraphs.Add()
+        para.Range.Text = "Furry Friends Animal Shelter"
+        para.Range.Style = "Heading 1"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Expenses Report"
+        para.Range.Style = "Heading 2"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        'Create "table" header
+        para.Range.Text = "Case Number" & vbTab & "Animal Name" & vbTab & vbTab & "Animal Type" & vbTab & vbTab & "Cost"
+        para.Range.Font.Bold = True
+        para.Range.InsertParagraphAfter()
+        para.Range.Font.Bold = False
+
+
+
+        Dim totalExpenses As Integer = 0
+
+        For currentCaseNum As Integer = 1 To intLastCaseNum
+            'objSheet.Range("A" & caseNum).Value() == Case Number == (caseNum+1)
+            'objSheet.Range("C" & caseNum).Value() == Animal Type
+            'objSheet.Range("M" & caseNum).Value() == Cage Number/Location
+            para.Range.Text = objSheet.Range("A" & (currentCaseNum + 1)).Value() & vbTab & vbTab _
+                            & objSheet.Range("B" & (currentCaseNum + 1)).Value() & vbTab & vbTab & vbTab _
+                            & objSheet.Range("C" & (currentCaseNum + 1)).Value() & vbTab & vbTab & vbTab _
+                            & "$" & generateCost(currentCaseNum) & ".00"
+            para.Range.InsertParagraphAfter()
+            totalExpenses += generateCost(currentCaseNum)
+        Next
+
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Total Expenses: " & vbTab & vbTab & vbTab & vbTab & vbTab & vbTab & vbTab & "$" & totalExpenses & ".00"
+        para.Range.Font.Bold = True
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Average Animal Expense: " & vbTab & vbTab & vbTab & vbTab & vbTab & "$" & (totalExpenses / intLastCaseNum)
+
+
+        ' Save the document.
+        Dim tempFileName As String = "Expenses Report"
+        inventoryReport.SaveAs2(CurDir() & "\Reports\" & tempFileName)
+        inventoryReport.SaveAs2(CurDir() & "\Reports\" & tempFileName & ".pdf", 17)
+        inventoryReport.Close()
+        word_app.Quit()
+        objExcel.Quit()
+        System.Diagnostics.Process.Start(CurDir() & "\Reports\" & tempFileName & ".pdf")
+    End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+Public Class New_Arrival
+    Public Shared animalName As String
+    Public Shared animalAge As Integer
+    Public Shared animalDateofBirth As Date
+    Public Shared microchippedYesOrNo As Boolean
+    Public Shared animalChipNumber As Integer
+    Public Shared animalOwner As String
+    Public Shared animalDateOfMicrochipping As Date
+    Public Shared animalDateContacted As Date
+    Public Shared animalDateofArrival As Date
+    Public Shared animalRelinquishingParty As String
+    Public Shared animalCageNumber As String
+    Private Sub AnimalAgeInput_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles AnimalAgeInput.KeyPress
+
+        '97 - 122 = Ascii codes for simple letters
+        '65 - 90  = Ascii codes for capital letters
+        '48 - 57  = Ascii codes for numbers
+
+        If Asc(e.KeyChar) <> 8 Then
+            If Asc(e.KeyChar) < 48 Or Asc(e.KeyChar) > 57 Then
+                e.Handled = True
+            End If
+        End If
+
+    End Sub
+    Private Sub ChipNumberInput_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles ChipNumberInput.KeyPress
+
+        '97 - 122 = Ascii codes for simple letters
+        '65 - 90  = Ascii codes for capital letters
+        '48 - 57  = Ascii codes for numbers
+
+        If Asc(e.KeyChar) <> 8 Then
+            If Asc(e.KeyChar) < 48 Or Asc(e.KeyChar) > 57 Then
+                e.Handled = True
+            End If
+        End If
+
+    End Sub
+    Private Sub MicrochippedYesButton_CheckedChanged(sender As Object, e As EventArgs) Handles MicrochippedYesButton.CheckedChanged
+        If Me.MicrochippedYesButton.Checked Then
+            OwnerLabel.Enabled = True
+            OwnerInput.Enabled = True
+            DateContactedLabel.Enabled = True
+            DateContactedInput.Enabled = True
+            DateofMicrochippingLabel.Enabled = False
+            DateofMicrochippingInput.Enabled = False
+        End If
+    End Sub
+    Private Sub MicrochippedNoButton_CheckedChanged(sender As Object, e As EventArgs) Handles MicrochippedNoButton.CheckedChanged
+        If Me.MicrochippedNoButton.Checked Then
+            OwnerLabel.Enabled = False
+            OwnerInput.Enabled = False
+            OwnerInput.Text = ""
+            DateContactedLabel.Enabled = False
+            DateContactedInput.Enabled = False
+            DateofMicrochippingLabel.Enabled = True
+            DateofMicrochippingInput.Enabled = True
+        End If
+    End Sub
+    Private Sub NewArrivalNextButton_Click(sender As Object, e As EventArgs) Handles NewArrivalNextButton.Click
+
+        animalName = AnimalNameInput.Text
+        animalAge = AnimalAgeInput.Text
+        animalDateofBirth = DateofBirthInput.Text
+
+        If MicrochippedYesButton.Checked Then
+            microchippedYesOrNo = True
+        ElseIf MicrochippedNoButton.Checked Then
+            microchippedYesOrNo = False
+        End If
+
+        animalChipNumber = ChipNumberInput.Text
+        animalOwner = OwnerInput.Text
+        animalDateOfMicrochipping = DateofMicrochippingInput.Text
+        animalDateContacted = DateContactedInput.Text
+        animalDateofArrival = DateofArrivalInput.Text
+        animalRelinquishingParty = RelinqPartyInput.Text
+        animalCageNumber = CageNumberInput.Text
+
+
+        If AnimalTypeInput.Text.CompareTo("Dog") = 0 Then
+            Dim dogInformationForm As Dog
+            dogInformationForm = New Dog
+            dogInformationForm.Show()
+            dogInformationForm = Nothing
+            Me.Hide()
+        ElseIf AnimalTypeInput.Text.CompareTo("Cat") = 0 Then
+            Dim catInformationForm As Cat
+            catInformationForm = New Cat
+            catInformationForm.Show()
+            catInformationForm = Nothing
+            Me.Hide()
+        ElseIf AnimalTypeInput.Text.CompareTo("Other") = 0 Then
+            Dim otherInformationForm As Other
+            otherInformationForm = New Other
+            otherInformationForm.Show()
+            otherInformationForm = Nothing
+            Me.Hide()
+        End If
+    End Sub
+    Private Sub NewArrivalPreviousButton_Click(sender As Object, e As EventArgs) Handles NewArrivalPreviousButton.Click
+        Dim newCaseNumberForm As CaseNumber
+        newCaseNumberForm = New CaseNumber
+        newCaseNumberForm.Show()
+        newCaseNumberForm = Nothing
+        Me.Hide()
+    End Sub
+
+    Private Sub New_Arrival_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        Application.Exit()
+    End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+Imports Word = Microsoft.Office.Interop.Word
+Imports Microsoft.Office.Interop
+
+
+Public Class Dog
+    Private Sub DogPreviousButton_Click(sender As Object, e As EventArgs) Handles DogPreviousButton.Click
+        New_Arrival.Show()
+        Me.Hide()
+    End Sub
+    Private Sub DogWeightInput_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles DogWeightInput.KeyPress
+
+        '97 - 122 = Ascii codes for simple letters
+        '65 - 90  = Ascii codes for capital letters
+        '48 - 57  = Ascii codes for numbers
+
+        If Asc(e.KeyChar) <> 8 Then
+            If Asc(e.KeyChar) < 48 Or Asc(e.KeyChar) > 57 Then
+                e.Handled = True
+            End If
+        End If
+
+    End Sub
+    Private Sub DogSpayedNoButton_CheckedChanged(sender As Object, e As EventArgs) Handles DogSpayedNoButton.CheckedChanged
+        If Me.DogSpayedNoButton.Checked Then
+            DogDateofProcedureLabel.Enabled = True
+            DogDateofProcedureInput.Enabled = True
+        End If
+    End Sub
+
+    Private Sub DogSpayedYesButton_CheckedChanged(sender As Object, e As EventArgs) Handles DogSpayedYesButton.CheckedChanged
+        If Me.DogSpayedYesButton.Checked Then
+            DogDateofProcedureLabel.Enabled = False
+            DogDateofProcedureInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub DogFleaTestYesButton_CheckedChanged(sender As Object, e As EventArgs) Handles DogFleaTestYesButton.CheckedChanged
+        If Me.DogFleaTestYesButton.Checked Then
+            DogDateofFirstTreatmentLabel.Enabled = True
+            DogDateofFirstTreatmentInput.Enabled = True
+        End If
+    End Sub
+
+    Private Sub DogFleaTestNoButton_CheckedChanged(sender As Object, e As EventArgs) Handles DogFleaTestNoButton.CheckedChanged
+        If Me.DogFleaTestNoButton.Checked Then
+            DogDateofFirstTreatmentLabel.Enabled = False
+            DogDateofFirstTreatmentInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub DogHeartwormTestPositiveButton_CheckedChanged(sender As Object, e As EventArgs) Handles DogHeartwormTestPositiveButton.CheckedChanged
+        If Me.DogHeartwormTestPositiveButton.Checked Then
+            DogDateMedBeginsLabel.Enabled = True
+            DogDateMedBeginsInput.Enabled = True
+            DogRetestDateLabel.Enabled = True
+            DogRetestDateInput.Enabled = True
+        End If
+    End Sub
+
+    Private Sub DogHeartwormTestNegativeButton_CheckedChanged(sender As Object, e As EventArgs) Handles DogHeartwormTestNegativeButton.CheckedChanged
+        If Me.DogHeartwormTestNegativeButton.Checked Then
+            DogDateMedBeginsLabel.Enabled = False
+            DogDateMedBeginsInput.Enabled = False
+            DogRetestDateLabel.Enabled = False
+            DogRetestDateInput.Enabled = False
+        End If
+    End Sub
+
+
+    Private Sub DogRabiesLabel_CheckedChanged(sender As Object, e As EventArgs) Handles DogRabiesLabel.CheckedChanged
+        If Me.DogRabiesLabel.Checked Then
+            DogRabiesVaccinationInput.Enabled = True
+        Else
+            DogRabiesVaccinationInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub DogDistemperLabel_CheckedChanged(sender As Object, e As EventArgs) Handles DogDistemperLabel.CheckedChanged
+        If Me.DogDistemperLabel.Checked Then
+            DogDistemperVaccinationInput.Enabled = True
+        Else
+            DogDistemperVaccinationInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub DogBordetellaLabel_CheckedChanged(sender As Object, e As EventArgs) Handles DogBordetellaLabel.CheckedChanged
+        If Me.DogBordetellaLabel.Checked Then
+            DogBordetellaVaccinationInput.Enabled = True
+        Else
+            DogBordetellaVaccinationInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub Dog_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        Application.Exit()
+    End Sub
+    Private Sub Dog_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\DogBreeds.txt")
+
+        For counter As Integer = 1 To 100
+            Dim tempBreed As String
+            tempBreed = reader.ReadLine()
+
+            DogBreedInput.Items.Add(tempBreed)
+            DogBreedInput.AutoCompleteCustomSource.Add(tempBreed)
+        Next
+
+        'Me.DogBreedInput = New System.Windows.Forms.ComboBox
+        reader.Close()
+    End Sub
+    Private Sub GenerateClientReport()
+        ' Get the Word application object.
+        Dim word_app As Word._Application = New Word.ApplicationClass()
+
+        ' Make Word visible (optional).
+        'word_app.Visible = True
+
+        ' Create the Word document.
+        Dim clientReport As Word._Document = word_app.Documents.Add()
+
+        ' Read in all existing case numbers to determine a new case number for current animal
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CaseNumbers.txt")
+
+        Dim lastCaseNum As String = 0
+
+        Do While reader.Peek <> -1
+            lastCaseNum = reader.ReadLine()
+        Loop
+        Dim newCaseNum As Integer = CUInt(lastCaseNum) + 1
+        reader.Close()
+
+        My.Computer.FileSystem.WriteAllText(CurDir() & "\Resources\CaseNumbers.txt", vbCrLf & newCaseNum, True)
+
+        ' Create title
+        Dim para As Word.Paragraph = clientReport.Paragraphs.Add()
+        para.Range.Text = "Furry Friends Animal Shelter"
+        para.Range.Style = "Heading 1"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Client Report"
+        para.Range.Style = "Heading 2"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        ' Add animal information
+        para.Range.Text = "Animal Name: " & vbTab & vbTab & New_Arrival.animalName
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Animal Age: " & vbTab & vbTab & New_Arrival.animalAge
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Date of Birth: " & vbTab & vbTab & New_Arrival.animalDateofBirth
+        para.Range.InsertParagraphAfter()
+        If New_Arrival.microchippedYesOrNo Then
+            para.Range.Text = "Chip Number: " & vbTab & vbTab & New_Arrival.animalChipNumber
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Owner: " & vbTab & vbTab & vbTab & New_Arrival.animalOwner
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Date Contacted: " & vbTab & New_Arrival.animalDateContacted
+            para.Range.InsertParagraphAfter()
+        Else
+            para.Range.Text = "Chip Number: " & vbTab & vbTab & New_Arrival.animalChipNumber
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Date of Micro-chipping: " & vbTab & New_Arrival.animalDateOfMicrochipping
+            para.Range.InsertParagraphAfter()
+        End If
+
+
+        para.Range.Text = "Breed: " & vbTab & vbTab & vbTab & DogBreedInput.Text & " (Dog)"
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Weight: " & vbTab & vbTab & DogWeightInput.Text
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Hair Color: " & vbTab & vbTab & DogHairColorInput.Text
+        para.Range.InsertParagraphAfter()
+
+        If DogLongHairButton.Checked Then
+            para.Range.Text = "Type of hair: " & vbTab & vbTab & "Long"
+            para.Range.InsertParagraphAfter()
+        ElseIf DogShortHairButton.Checked Then
+            para.Range.Text = "Type of hair: " & vbTab & vbTab & "Short"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If DogAnimalSexFemaleButton.Checked Then
+            para.Range.Text = "Animal Sex: " & vbTab & vbTab & "Female"
+            para.Range.InsertParagraphAfter()
+        ElseIf DogAnimalSexMaleButton.Checked Then
+            para.Range.Text = "Animal Sex: " & vbTab & vbTab & "Male"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        para.Range.InsertParagraphAfter()
+
+        If DogSpayedNoButton.Checked Then
+            para.Range.Text = "Dog is not spayed or neutered."
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Date chosen for procedure: " & vbTab & DogDateofProcedureInput.Text
+            para.Range.InsertParagraphAfter()
+
+        ElseIf DogSpayedYesButton.Checked Then
+            para.Range.Text = "Dog is spayed or neutered."
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If DogFleaTestNoButton.Checked Then
+            para.Range.Text = "Dog is not checked for fleas."
+            para.Range.InsertParagraphAfter()
+        ElseIf DogFleaTestYesButton.Checked Then
+            para.Range.Text = "Dog is checked for fleas."
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Date of first treatment: " & vbTab & vbTab & DogDateofFirstTreatmentInput.Text
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If DogHeartwormTestPositiveButton.Checked Then
+            para.Range.Text = "Dog has heartworms."
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Date of heartworm test: " & vbTab & DogDateofHeartwormTestInput.Text
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Date medication begins: " & vbTab & DogDateMedBeginsInput.Text
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Retest date: " & vbTab & vbTab & vbTab & DogRetestDateInput.Text
+            para.Range.InsertParagraphAfter()
+        ElseIf DogHeartwormTestNegativeButton.Checked Then
+            para.Range.Text = "Dog does not have heartworms."
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Date of heartworm test: " & vbTab & vbTab & DogDateofHeartwormTestInput.Text
+            para.Range.InsertParagraphAfter()
+        End If
+
+        para.Range.InsertParagraphAfter()
+
+        If DogRabiesLabel.Checked Then
+            para.Range.Text = "Rabies vaccination administered on: " & vbTab & DogRabiesVaccinationInput.Text
+            para.Range.InsertParagraphAfter()
+        Else
+            para.Range.Text = "Rabies vaccination not administered."
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If DogDistemperLabel.Checked Then
+            para.Range.Text = "Distemper vaccination administered on: " & vbTab & DogDistemperVaccinationInput.Text
+            para.Range.InsertParagraphAfter()
+        Else
+            para.Range.Text = "Distemper vaccination not administered."
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If DogBordetellaLabel.Checked Then
+            para.Range.Text = "Bordetella vaccination administered on: " & vbTab & DogBordetellaVaccinationInput.Text
+            para.Range.InsertParagraphAfter()
+        Else
+            para.Range.Text = "Bordetella vaccination not administered."
+            para.Range.InsertParagraphAfter()
+        End If
+
+
+        ' Save the document.
+        Dim tempFileName As String = "" & newCaseNum & " Client Report"
+        clientReport.SaveAs2(CurDir() & "\Reports\Client Reports\" & tempFileName)
+        clientReport.SaveAs2(CurDir() & "\Reports\Client Reports\" & tempFileName & ".pdf", 17)
+        clientReport.Close()
+        word_app.Quit()
+        reader.Close()
+        System.Diagnostics.Process.Start(CurDir() & "\Reports\Client Reports\" & tempFileName & ".pdf")
+    End Sub
+    Private Sub UpdateExcel()
+        Dim objExcel As New Excel.Application
+        Dim objWorkbook As Excel.Workbook
+        Dim objSheet As Excel.Worksheet
+        objWorkbook = objExcel.Workbooks.Open(CurDir() & "\Resources\Furry Friends Records Database.xls")
+        objSheet = objWorkbook.ActiveSheet
+
+        ' Read in all existing case numbers to determine a new case number for current animal
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CaseNumbers.txt")
+
+        Dim lastCaseNum As String = 0
+
+        Do While reader.Peek <> -1
+            lastCaseNum = reader.ReadLine()
+        Loop
+        Dim newCaseNum As Integer = CUInt(lastCaseNum)
+        reader.Close()
+
+        'Add data to cells of the first worksheet in the new workbook
+        Dim currentCaseNum As String = newCaseNum.ToString
+        objSheet.Range("A" & (newCaseNum + 1)).Value = "" & currentCaseNum
+        objSheet.Range("B" & (newCaseNum + 1)).Value = New_Arrival.animalName
+        objSheet.Range("C" & (newCaseNum + 1)).Value = "Dog"
+        objSheet.Range("D" & (newCaseNum + 1)).Value = New_Arrival.animalAge
+        objSheet.Range("E" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateofBirth
+        objSheet.Range("F" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateofArrival
+
+        'Microchipped Info
+        If New_Arrival.microchippedYesOrNo Then
+            objSheet.Range("G" & (newCaseNum + 1)).Value = "Yes"
+            objSheet.Range("I" & (newCaseNum + 1)).Value = New_Arrival.animalOwner
+            objSheet.Range("J" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateContacted
+
+        Else
+            objSheet.Range("G" & (newCaseNum + 1)).Value = "No"
+            objSheet.Range("K" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateOfMicrochipping
+        End If
+
+        objSheet.Range("H" & (newCaseNum + 1)).Value = New_Arrival.animalChipNumber
+        objSheet.Range("L" & (newCaseNum + 1)).Value = New_Arrival.animalRelinquishingParty
+        objSheet.Range("M" & (newCaseNum + 1)).Value = New_Arrival.animalCageNumber
+        objSheet.Range("N" & (newCaseNum + 1)).Value = DogBreedInput.Text
+        objSheet.Range("O" & (newCaseNum + 1)).Value = DogWeightInput.Text
+        objSheet.Range("P" & (newCaseNum + 1)).Value = DogHairColorInput.Text
+
+        'Dog Hair
+        If DogLongHairButton.Checked Then
+            objSheet.Range("Q" & (newCaseNum + 1)).Value = "Long"
+        ElseIf DogShortHairButton.Checked Then
+            objSheet.Range("Q" & (newCaseNum + 1)).Value = "Short"
+        End If
+
+        'Gender
+        If DogAnimalSexFemaleButton.Checked Then
+            objSheet.Range("R" & (newCaseNum + 1)).Value = "Female"
+        ElseIf DogAnimalSexMaleButton.Checked Then
+            objSheet.Range("R" & (newCaseNum + 1)).Value = "Male"
+        End If
+
+        'Spayed/Neutered Info
+        If DogSpayedNoButton.Checked Then
+            objSheet.Range("S" & (newCaseNum + 1)).Value = "No"
+            objSheet.Range("T" & (newCaseNum + 1)).Value2 = DogDateofProcedureInput.Text
+        ElseIf DogSpayedYesButton.Checked Then
+            objSheet.Range("S" & (newCaseNum + 1)).Value = "Yes"
+        End If
+
+        'Flea Test Info
+        If DogFleaTestNoButton.Checked Then
+            objSheet.Range("U" & (newCaseNum + 1)).Value = "No"
+        ElseIf DogFleaTestYesButton.Checked Then
+            objSheet.Range("U" & (newCaseNum + 1)).Value = "Yes"
+            objSheet.Range("V" & (newCaseNum + 1)).Value2 = DogDateofFirstTreatmentInput.Text
+        End If
+
+        'Rabies Info
+        If DogRabiesLabel.Checked Then
+            objSheet.Range("AA" & (newCaseNum + 1)).Value = "Yes"
+            objSheet.Range("AB" & (newCaseNum + 1)).Value2 = DogRabiesVaccinationInput.Text
+        End If
+
+        'Heartworm Info
+        If DogHeartwormTestPositiveButton.Checked Then
+            objSheet.Range("W" & (newCaseNum + 1)).Value = "Positive"
+        ElseIf DogHeartwormTestNegativeButton.Checked Then
+            objSheet.Range("W" & (newCaseNum + 1)).Value = "Negative"
+            objSheet.Range("X" & (newCaseNum + 1)).Value2 = DogDateofHeartwormTestInput.Text
+            objSheet.Range("Y" & (newCaseNum + 1)).Value2 = DogDateMedBeginsInput.Text
+            objSheet.Range("Z" & (newCaseNum + 1)).Value2 = DogRetestDateInput.Text
+        End If
+
+        'Distemper Info
+        If DogDistemperVaccinationInput.Checked Then
+            objSheet.Range("AC" & (newCaseNum + 1)).Value = "Yes"
+        Else
+            objSheet.Range("AC" & (newCaseNum + 1)).Value = "No"
+        End If
+        objSheet.Range("AD" & (newCaseNum + 1)).Value2 = DogDistemperVaccinationInput.Text
+
+        'Bordetella Info
+        If DogBordetellaVaccinationInput.Checked Then
+            objSheet.Range("AE" & (newCaseNum + 1)).Value = "Yes"
+        Else
+            objSheet.Range("AE" & (newCaseNum + 1)).Value = "No"
+        End If
+        objSheet.Range("AF" & (newCaseNum + 1)).Value2 = DogBordetellaVaccinationInput.Text
+
+        objExcel.ActiveWorkbook.Save()
+        objExcel.Quit()
+    End Sub
+    Private Sub DogNextButton_Click(sender As Object, e As EventArgs) Handles DogNextButton.Click
+        GenerateClientReport()
+        UpdateExcel()
+
+        Application.Exit()
+
+        ''Close.
+        'Dim save_changes As Object = False
+        'clientReport.Close(save_changes)
+        'word_app.Quit(save_changes)
+    End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+Imports Word = Microsoft.Office.Interop.Word
+Imports Microsoft.Office.Interop
+
+Public Class Cat
+    Private Sub CatPreviousButton_Click(sender As Object, e As EventArgs) Handles CatPreviousButton.Click
+        New_Arrival.Show()
+        Me.Hide()
+    End Sub
+    Private Sub CatWeightInput_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles CatWeightInput.KeyPress
+
+        '97 - 122 = Ascii codes for simple letters
+        '65 - 90  = Ascii codes for capital letters
+        '48 - 57  = Ascii codes for numbers
+
+        If Asc(e.KeyChar) <> 8 Then
+            If Asc(e.KeyChar) < 48 Or Asc(e.KeyChar) > 57 Then
+                e.Handled = True
+            End If
+        End If
+
+    End Sub
+    Private Sub CatSpayedNoButton_CheckedChanged(sender As Object, e As EventArgs) Handles CatSpayedNoButton.CheckedChanged
+        If Me.CatSpayedNoButton.Checked Then
+            CatDateofProcedureLabel.Enabled = True
+            CatDateofProcedureInput.Enabled = True
+        End If
+    End Sub
+
+    Private Sub CatSpayedYesButton_CheckedChanged(sender As Object, e As EventArgs) Handles CatSpayedYesButton.CheckedChanged
+        If Me.CatSpayedYesButton.Checked Then
+            CatDateofProcedureLabel.Enabled = False
+            CatDateofProcedureInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub CatFleaTestYesButton_CheckedChanged(sender As Object, e As EventArgs) Handles CatFleaTestYesButton.CheckedChanged
+        If Me.CatFleaTestYesButton.Checked Then
+            CatDateofFirstTreatmentLabel.Enabled = True
+            CatDateofFirstTreatmentInput.Enabled = True
+        End If
+    End Sub
+
+    Private Sub CatFleaTestNoButton_CheckedChanged(sender As Object, e As EventArgs) Handles CatFleaTestNoButton.CheckedChanged
+        If Me.CatFleaTestNoButton.Checked Then
+            CatDateofFirstTreatmentLabel.Enabled = False
+            CatDateofFirstTreatmentInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub CatDeclawedYesButton_CheckedChanged(sender As Object, e As EventArgs) Handles CatDeclawedYesButton.CheckedChanged
+        If Me.CatDeclawedYesButton.Checked Then
+            CatDeclawingLabel.Enabled = False
+            CatDeclawingTwoButton.Enabled = False
+            CatDeclawingFourButton.Enabled = False
+            CatDeclawingGroupBox.Enabled = False
+        End If
+    End Sub
+
+    Private Sub CatDeclawedNoButton_CheckedChanged(sender As Object, e As EventArgs) Handles CatDeclawedNoButton.CheckedChanged
+        If Me.CatDeclawedNoButton.Checked Then
+            CatDeclawingLabel.Enabled = True
+            CatDeclawingTwoButton.Enabled = True
+            CatDeclawingFourButton.Enabled = True
+            CatDeclawingGroupBox.Enabled = True
+        End If
+    End Sub
+
+    Private Sub CatRabiesLabel_CheckedChanged(sender As Object, e As EventArgs) Handles CatRabiesLabel.CheckedChanged
+        If Me.CatRabiesLabel.Checked Then
+            CatRabiesVaccinationInput.Enabled = True
+        Else
+            CatRabiesVaccinationInput.Enabled = False
+        End If
+    End Sub
+
+    Private Sub Cat_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        Application.Exit()
+    End Sub
+    Private Sub Cat_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles MyBase.Load
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CatBreeds.txt")
+
+        For counter As Integer = 1 To 100
+            Dim tempBreed As String
+            tempBreed = reader.ReadLine()
+
+            CatBreedInput.Items.Add(tempBreed)
+            CatBreedInput.AutoCompleteCustomSource.Add(tempBreed)
+        Next
+
+        'Me.DogBreedInput = New System.Windows.Forms.ComboBox
+        reader.Close()
+    End Sub
+    Private Sub GenerateClientReport()
+        ' Get the Word application object.
+        Dim word_app As Word._Application = New Word.ApplicationClass()
+
+        ' Make Word visible (optional).
+        'word_app.Visible = True
+
+        ' Create the Word document.
+        Dim clientReport As Word._Document = word_app.Documents.Add()
+
+        ' Read in all existing case numbers to determine a new case number for current animal
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CaseNumbers.txt")
+
+        Dim lastCaseNum As String = 0
+
+        Do While reader.Peek <> -1
+            lastCaseNum = reader.ReadLine()
+        Loop
+        Dim newCaseNum As Integer = CUInt(lastCaseNum) + 1
+        reader.Close()
+
+        My.Computer.FileSystem.WriteAllText(CurDir() & "\Resources\CaseNumbers.txt", vbCrLf & newCaseNum, True)
+
+        ' Create title
+        Dim para As Word.Paragraph = clientReport.Paragraphs.Add()
+        para.Range.Text = "Furry Friends Animal Shelter"
+        para.Range.Style = "Heading 1"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Client Report"
+        para.Range.Style = "Heading 2"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        ' Add animal information
+        para.Range.Text = "Animal Name: " & vbTab & vbTab & New_Arrival.animalName
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Animal Age: " & vbTab & vbTab & New_Arrival.animalAge
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Date of Birth: " & vbTab & vbTab & New_Arrival.animalDateofBirth
+        para.Range.InsertParagraphAfter()
+        If New_Arrival.microchippedYesOrNo Then
+            para.Range.Text = "Chip Number: " & vbTab & vbTab & New_Arrival.animalChipNumber
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Owner: " & vbTab & vbTab & vbTab & New_Arrival.animalOwner
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Date Contacted: " & vbTab & New_Arrival.animalDateContacted
+            para.Range.InsertParagraphAfter()
+        Else
+            para.Range.Text = "Chip Number: " & vbTab & vbTab & New_Arrival.animalChipNumber
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Date of Micro-chipping: " & vbTab & New_Arrival.animalDateOfMicrochipping
+            para.Range.InsertParagraphAfter()
+        End If
+
+        para.Range.Text = "Breed: " & vbTab & vbTab & vbTab & CatBreedInput.Text & " (Cat)"
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Weight: " & vbTab & vbTab & CatWeightInput.Text
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Hair Color: " & vbTab & vbTab & CatHairColorInput.Text
+        para.Range.InsertParagraphAfter()
+
+        If CatLongHairButton.Checked Then
+            para.Range.Text = "Type of hair: " & vbTab & vbTab & "Long"
+            para.Range.InsertParagraphAfter()
+        ElseIf CatShortHairButton.Checked Then
+            para.Range.Text = "Type of hair: " & vbTab & vbTab & "Short"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If CatAnimalSexFemaleButton.Checked Then
+            para.Range.Text = "Animal Sex: " & vbTab & vbTab & "Female"
+            para.Range.InsertParagraphAfter()
+        ElseIf CatAnimalSexMaleButton.Checked Then
+            para.Range.Text = "Animal Sex: " & vbTab & vbTab & "Male"
+            para.Range.InsertParagraphAfter()
+        End If
+
+        para.Range.InsertParagraphAfter()
+
+        If CatSpayedNoButton.Checked Then
+            para.Range.Text = "Cat is not spayed or neutered."
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Date chosen for procedure: " & vbTab & CatDateofProcedureInput.Text
+            para.Range.InsertParagraphAfter()
+
+        ElseIf CatSpayedYesButton.Checked Then
+            para.Range.Text = "Cat is spayed or neutered."
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If CatFleaTestNoButton.Checked Then
+            para.Range.Text = "Cat is not checked for fleas."
+            para.Range.InsertParagraphAfter()
+        ElseIf CatFleaTestYesButton.Checked Then
+            para.Range.Text = "Cat is checked for fleas."
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = vbTab & "Date of first treatment: " & vbTab & vbTab & CatDateofFirstTreatmentInput.Text
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If CatFelineLeukemiaTestPositiveButton.Checked Then
+            para.Range.Text = "Positive Feline Leukemia test."
+            para.Range.InsertParagraphAfter()
+        ElseIf CatFelineLeukemiaTestNegativeButton.Checked Then
+            para.Range.Text = "Negative Feline Leukemia test."
+            para.Range.InsertParagraphAfter()
+        End If
+
+        If CatRabiesLabel.Checked Then
+            para.Range.Text = "Rabies vaccination administered on: " & vbTab & CatRabiesVaccinationInput.Text
+            para.Range.InsertParagraphAfter()
+        Else
+            para.Range.Text = "Rabies vaccination not administered."
+            para.Range.InsertParagraphAfter()
+        End If
+
+        ' Save the document.
+        Dim tempFileName As String = "" & newCaseNum & " Client Report"
+        clientReport.SaveAs2(CurDir() & "\Reports\Client Reports\" & tempFileName)
+        clientReport.SaveAs2(CurDir() & "\Reports\Client Reports\" & tempFileName & ".pdf", 17)
+        clientReport.Close()
+        word_app.Quit()
+        reader.Close()
+        System.Diagnostics.Process.Start(CurDir() & "\Reports\Client Reports\" & tempFileName & ".pdf")
+    End Sub
+    Private Sub UpdateExcel()
+        Dim objExcel As New Excel.Application
+        Dim objWorkbook As Excel.Workbook
+        Dim objSheet As Excel.Worksheet
+        objWorkbook = objExcel.Workbooks.Open(CurDir() & "\Resources\Furry Friends Records Database.xls")
+        objSheet = objWorkbook.ActiveSheet
+
+        ' Read in all existing case numbers to determine a new case number for current animal
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CaseNumbers.txt")
+
+        Dim lastCaseNum As String = 0
+
+        Do While reader.Peek <> -1
+            lastCaseNum = reader.ReadLine()
+        Loop
+        Dim newCaseNum As Integer = CUInt(lastCaseNum)
+        reader.Close()
+
+        'Add data to cells of the first worksheet in the new workbook
+        Dim currentCaseNum As String = newCaseNum.ToString
+        objSheet.Range("A" & (newCaseNum + 1)).Value = "" & currentCaseNum
+        objSheet.Range("B" & (newCaseNum + 1)).Value = New_Arrival.animalName
+        objSheet.Range("C" & (newCaseNum + 1)).Value = "Cat"
+        objSheet.Range("D" & (newCaseNum + 1)).Value = New_Arrival.animalAge
+        objSheet.Range("E" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateofBirth
+        objSheet.Range("F" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateofArrival
+
+        'Microchipped Info
+        If New_Arrival.microchippedYesOrNo Then
+            objSheet.Range("G" & (newCaseNum + 1)).Value = "Yes"
+        Else
+            objSheet.Range("G" & (newCaseNum + 1)).Value = "No"
+        End If
+
+        objSheet.Range("H" & (newCaseNum + 1)).Value = New_Arrival.animalChipNumber
+        objSheet.Range("I" & (newCaseNum + 1)).Value = New_Arrival.animalOwner
+        objSheet.Range("J" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateContacted
+        objSheet.Range("K" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateOfMicrochipping
+        objSheet.Range("L" & (newCaseNum + 1)).Value = New_Arrival.animalRelinquishingParty
+        objSheet.Range("M" & (newCaseNum + 1)).Value = New_Arrival.animalCageNumber
+        objSheet.Range("N" & (newCaseNum + 1)).Value = CatBreedInput.Text
+        objSheet.Range("O" & (newCaseNum + 1)).Value = CatWeightInput.Text
+        objSheet.Range("P" & (newCaseNum + 1)).Value = CatHairColorInput.Text
+
+        'Cat Hair
+        If CatLongHairButton.Checked Then
+            objSheet.Range("Q" & (newCaseNum + 1)).Value = "Long"
+        ElseIf CatShortHairButton.Checked Then
+            objSheet.Range("Q" & (newCaseNum + 1)).Value = "Short"
+        End If
+
+        'Gender
+        If CatAnimalSexFemaleButton.Checked Then
+            objSheet.Range("R" & (newCaseNum + 1)).Value = "Female"
+        ElseIf CatAnimalSexMaleButton.Checked Then
+            objSheet.Range("R" & (newCaseNum + 1)).Value = "Male"
+        End If
+
+        'Spayed/Neutered Info
+        If CatSpayedNoButton.Checked Then
+            objSheet.Range("S" & (newCaseNum + 1)).Value = "No"
+            objSheet.Range("T" & (newCaseNum + 1)).Value2 = CatDateofProcedureInput.Text
+        ElseIf CatSpayedYesButton.Checked Then
+            objSheet.Range("S" & (newCaseNum + 1)).Value = "Yes"
+        End If
+
+        'Flea Test Info
+        If CatFleaTestNoButton.Checked Then
+            objSheet.Range("U" & (newCaseNum + 1)).Value = "No"
+        ElseIf CatFleaTestYesButton.Checked Then
+            objSheet.Range("U" & (newCaseNum + 1)).Value = "Yes"
+            objSheet.Range("V" & (newCaseNum + 1)).Value2 = CatDateofFirstTreatmentInput.Text
+        End If
+
+        'Rabies Info
+        If CatRabiesLabel.Checked Then
+            objSheet.Range("AA" & (newCaseNum + 1)).Value = "Yes"
+            objSheet.Range("AB" & (newCaseNum + 1)).Value2 = CatRabiesVaccinationInput.Text
+        End If
+
+        'Cat Declawing Info
+        If CatDeclawedYesButton.Checked Then
+            objSheet.Range("AG" & (newCaseNum + 1)).Value = "Yes"
+        ElseIf CatDeclawedNoButton.Checked Then
+            objSheet.Range("AG" & (newCaseNum + 1)).Value = "No"
+            If CatDeclawingTwoButton.Checked Then
+                objSheet.Range("AH" & (newCaseNum + 1)).Value = "Two"
+            ElseIf CatDeclawingFourButton.Checked Then
+                objSheet.Range("AH" & (newCaseNum + 1)).Value = "Four"
+            End If
+        End If
+
+        'Cat Feline Leukemia Test Info
+        If CatFelineLeukemiaTestPositiveButton.Checked Then
+            objSheet.Range("AI" & (newCaseNum + 1)).Value = "Positive"
+            objSheet.Range("AJ" & (newCaseNum + 1)).Value2 = CatDateofFelineLeukemiaTestInput.Text
+        ElseIf CatFelineLeukemiaTestNegativeButton.Checked Then
+            objSheet.Range("AI" & (newCaseNum + 1)).Value = "Negative"
+        End If
+
+        objExcel.ActiveWorkbook.Save()
+        objExcel.Quit()
+    End Sub
+    Private Sub CatNextButton_Click(sender As Object, e As EventArgs) Handles CatNextButton.Click
+        GenerateClientReport()
+        UpdateExcel()
+
+
+
+        Application.Exit()
+
+        ''Close.
+        'Dim save_changes As Object = False
+        'clientReport.Close(save_changes)
+        'word_app.Quit(save_changes)
+    End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+Imports Word = Microsoft.Office.Interop.Word
+Imports Microsoft.Office.Interop
+
+Public Class Other
+    Private Sub OtherWeightInput_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles OtherWeightInput.KeyPress
+        '97 - 122 = Ascii codes for simple letters
+        '65 - 90  = Ascii codes for capital letters
+        '48 - 57  = Ascii codes for numbers
+
+        If Asc(e.KeyChar) <> 8 Then
+            If Asc(e.KeyChar) < 48 Or Asc(e.KeyChar) > 57 Then
+                e.Handled = True
+            End If
+        End If
+    End Sub
+    Private Sub OtherNumVaccinationsInput_KeyPress(sender As Object, e As KeyPressEventArgs) Handles OtherNumVaccinationsInput.KeyPress
+        '97 - 122 = Ascii codes for simple letters
+        '65 - 90  = Ascii codes for capital letters
+        '48 - 57  = Ascii codes for numbers
+
+        If Asc(e.KeyChar) <> 8 Then
+            If Asc(e.KeyChar) < 48 Or Asc(e.KeyChar) > 57 Then
+                e.Handled = True
+            End If
+        End If
+    End Sub
+    Private Sub OtherPreviousButton_Click(sender As Object, e As EventArgs) Handles OtherPreviousButton.Click
+        New_Arrival.Show()
+        Me.Hide()
+    End Sub
+    Private Sub GenerateClientReport()
+        ' Get the Word Application object.
+        Dim word_app As Word._Application = New Word.ApplicationClass()
+
+        ' Make Word visible (optional).
+        'word_app.Visible = True
+
+        ' Create the Word document.
+        Dim clientReport As Word._Document = word_app.Documents.Add()
+
+        ' Read in all existing case numbers to determine a new case number for current animal
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CaseNumbers.txt")
+
+        Dim lastCaseNum As String = 0
+
+        Do While reader.Peek <> -1
+            lastCaseNum = reader.ReadLine()
+        Loop
+        Dim newCaseNum As Integer = CUInt(lastCaseNum) + 1
+        reader.Close()
+
+        My.Computer.FileSystem.WriteAllText(CurDir() & "\Resources\CaseNumbers.txt", vbCrLf & newCaseNum, True)
+
+        ' Create title
+        Dim para As Word.Paragraph = clientReport.Paragraphs.Add()
+        para.Range.Text = "Furry Friends Animal Shelter"
+        para.Range.Style = "Heading 1"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Client Report"
+        para.Range.Style = "Heading 2"
+        para.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        ' Add animal information
+        para.Range.Text = "Animal Name: " & vbTab & vbTab & New_Arrival.animalName
+        para.Format.SpaceAfter = 0
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Animal Age: " & vbTab & vbTab & New_Arrival.animalAge
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Date of Birth: " & vbTab & vbTab & New_Arrival.animalDateofBirth
+        para.Range.InsertParagraphAfter()
+        If New_Arrival.microchippedYesOrNo Then
+            para.Range.Text = "Chip Number: " & vbTab & vbTab & New_Arrival.animalChipNumber
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Owner: " & vbTab & vbTab & vbTab & New_Arrival.animalOwner
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Date Contacted: " & vbTab & New_Arrival.animalDateContacted
+            para.Range.InsertParagraphAfter()
+        Else
+            para.Range.Text = "Chip Number: " & vbTab & vbTab & New_Arrival.animalChipNumber
+            para.Range.InsertParagraphAfter()
+            para.Range.Text = "Date of Micro-chipping: " & vbTab & New_Arrival.animalDateOfMicrochipping
+            para.Range.InsertParagraphAfter()
+        End If
+
+        para.Range.Text = "Animal Type: " & vbTab & vbTab & OtherAnimalTypeInput.Text
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Weight: " & vbTab & vbTab & OtherWeightInput.Text
+        para.Range.InsertParagraphAfter()
+        para.Range.InsertParagraphAfter()
+
+        para.Range.Text = "Animal Appearance Description: " & vbTab & OtherAnimalAppearanceInput.Text
+        para.Range.InsertParagraphAfter()
+
+        para.Range.Text = "Number of Vaccinations: " & vbTab & vbTab & OtherNumVaccinationsInput.Text
+        para.Range.InsertParagraphAfter()
+        para.Range.Text = "Vaccinations: " & vbTab & vbTab & vbTab & vbTab & OtherVaccinationsInput.Text
+        para.Range.InsertParagraphAfter()
+
+        ' Save the document.
+        Dim tempFileName As String = "" & newCaseNum & " Client Report"
+        clientReport.SaveAs2(CurDir() & "\Reports\Client Reports\" & tempFileName)
+        clientReport.SaveAs2(CurDir() & "\Reports\Client Reports\" & tempFileName & ".pdf", 17)
+        clientReport.Close()
+        word_app.Quit()
+        reader.Close()
+        System.Diagnostics.Process.Start(CurDir() & "\Reports\Client Reports\" & tempFileName & ".pdf")
+    End Sub
+    Private Sub UpdateExcel()
+        Dim objExcel As New Excel.Application
+        Dim objWorkbook As Excel.Workbook
+        Dim objSheet As Excel.Worksheet
+        objWorkbook = objExcel.Workbooks.Open(CurDir() & "\Resources\Furry Friends Records Database.xls")
+        objSheet = objWorkbook.ActiveSheet
+
+        ' Read in all existing case numbers to determine a new case number for current animal
+        Dim reader As New System.IO.StreamReader(CurDir() & "\Resources\CaseNumbers.txt")
+
+        Dim lastCaseNum As String = 0
+
+        Do While reader.Peek <> -1
+            lastCaseNum = reader.ReadLine()
+        Loop
+        Dim newCaseNum As Integer = CUInt(lastCaseNum)
+        reader.Close()
+
+        'Add data to cells of the first worksheet in the new workbook
+        Dim currentCaseNum As String = newCaseNum.ToString
+        objSheet.Range("A" & (newCaseNum + 1)).Value = "" & currentCaseNum
+        objSheet.Range("B" & (newCaseNum + 1)).Value = New_Arrival.animalName
+        objSheet.Range("C" & (newCaseNum + 1)).Value = OtherAnimalTypeInput.Text
+        objSheet.Range("D" & (newCaseNum + 1)).Value = New_Arrival.animalAge
+        objSheet.Range("E" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateofBirth
+        objSheet.Range("F" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateofArrival
+
+        'Microchipped Info
+        If New_Arrival.microchippedYesOrNo Then
+            objSheet.Range("G" & (newCaseNum + 1)).Value = "Yes"
+        Else
+            objSheet.Range("G" & (newCaseNum + 1)).Value = "No"
+        End If
+
+        objSheet.Range("H" & (newCaseNum + 1)).Value = New_Arrival.animalChipNumber
+        objSheet.Range("I" & (newCaseNum + 1)).Value = New_Arrival.animalOwner
+        objSheet.Range("J" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateContacted
+        objSheet.Range("K" & (newCaseNum + 1)).Value2 = New_Arrival.animalDateOfMicrochipping
+        objSheet.Range("L" & (newCaseNum + 1)).Value = New_Arrival.animalRelinquishingParty
+        objSheet.Range("M" & (newCaseNum + 1)).Value = New_Arrival.animalCageNumber
+        objSheet.Range("O" & (newCaseNum + 1)).Value = OtherWeightInput.Text
+
+        objSheet.Range("AK" & (newCaseNum + 1)).Value = OtherAnimalAppearanceInput.Text
+        objSheet.Range("AL" & (newCaseNum + 1)).Value = OtherNumVaccinationsInput.Text
+        objSheet.Range("AM" & (newCaseNum + 1)).Value = OtherVaccinationsInput.Text
+
+        objExcel.ActiveWorkbook.Save()
+        reader.Close()
+        objExcel.Quit()
+    End Sub
+    Private Sub OtherNextButton_Click(sender As Object, e As EventArgs) Handles OtherNextButton.Click
+        GenerateClientReport()
+        UpdateExcel()
+
+
+
+        Application.Exit()
+
+        ''Close.
+        'Dim save_changes As Object = False
+        'clientReport.Close(save_changes)
+        'word_app.Quit(save_changes)
+    End Sub
+End Class

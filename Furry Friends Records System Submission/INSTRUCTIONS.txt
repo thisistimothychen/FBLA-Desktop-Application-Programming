@@ -1,0 +1,28 @@
+Instructions for HaeMee Lee's FBLA Desktop Application Programming submission
+
+Note: If the executable file is deleted from the flash drive by antivirus software, the entire project (entire flash drive contents) can be downloaded at: https://www.dropbox.com/s/r6go8tm762w17jy/Furry%20Friends%20Records%20System%20Submission.rar?dl=0
+
+System Requirements: Windows XP or higher, Microsoft Office installed, PDF reader installed. Older computers may take longer to generate reports.
+
+
+1. Set the computer/antivirus software to trust the flash drive contents (the executible file might pose an issue because of digital signing/certification issues). Another solution is to disable antivirus software.
+
+2. The executible file is the one named "Furry Friends Records System" with a Paw as the icon/logo. Open this to start the program.
+
+3. There are two folders, reports and resources. You can go in and access all reports which have been created through the folders (though the intended method is by using the program to access the files). The resources folder contains two flat files ("CatBreeds" and "DogBreeds") which are used to populate the drop down list for cat or dog breed. The "CaseNumbers" file holds all existing animal numbers and is used by the program to determine the animals it needs to include in reports. Case numbers increment with each animal added to the system.
+
+4. Three animal entries already created. You can pull up the reports for each animal by entering in their case number (1-3) into the program and clicking the "Client Report" or "Cost Report" button.
+
+5. To create a new entry, click the "New Arrival" button. This animal will be automatically assigned the next case number available. The program will automatically close after the client report is generated. If another report is needed, the user must run the program again.
+
+
+Additional Notes:
+1. When selecting "Cat" as animal type, the program may throw an error. Click "Continue" and the program will run as intended.
+
+2. If there are a lot of animals in the database, it may take a few additional seconds to generate the report.
+
+3. The program code is provided in a separate text file: "Program Code (Visual Basic).txt"
+
+4. The Visual Studio file (2013 Pro) is also provided, if the software is available. The project and supporting files are in the folder "Furry Friends Records System Dev"
+
+5. If there is a need to restart the judging from scratch, the "Original Slate" folder contains the original settings/entries that were provided when this USB was mailed. To utilize this, first delete the "Resources" and "Reports" folder from the root of the USB. Then, copy and paste the contents of the "Original Slate" folder into the root of the USB.
